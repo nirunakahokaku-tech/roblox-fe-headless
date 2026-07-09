@@ -43,6 +43,17 @@ function Utils.getNeckJoint(character, humanoid)
     return character:FindFirstChild("Neck", true)
 end
 
+function Utils.getSacrificeHandle(character, itemName)
+    local accessory = character:FindFirstChild(itemName)
+    if accessory and accessory:IsA("Accessory") then
+        local handle = accessory:FindFirstChild("Handle")
+        if handle then
+            return handle, handle:FindFirstChildOfClass("Weld")
+        end
+    end
+    return nil, nil
+end
+
 
 end
 
