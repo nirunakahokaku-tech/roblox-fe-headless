@@ -13,17 +13,35 @@ function Headless.Enable(player)
     Headless.Active = true
     
     local function applyHeadless(character)
-        local _, humanoid, head = Utils.waitForCharacter(player)
-        if not character or not humanoid or not head then return end
+        local char, humanoid, head, rootPart = Utils.waitForCharacter(player)
+        if not char or not humanoid or not head or not rootPart then return end
         
-        local neck = Utils.getNeckJoint(character, humanoid)
+        local neck = Utils.getNeckJoint(char, humanoid)
         if not neck then return end
         
         if not Headless.OriginalC0 then
             Headless.OriginalC0 = neck.C0
         end
+
+        local function fixUI(child)
+            if child:IsA("BillboardGui") or child:IsA("SurfaceGui") then
+                task.defer(function()
+                    if child.Parent == head then
+                        child.Parent = rootPart
+                        if child:IsA("BillboardGui") then
+                            child.StudsOffset = child.StudsOffset + Vector3.new(0, 1.5, 0)
+                        end
+                    end
+                end)
+            end
+        end
+
+        for _, child in ipairs(head:GetChildren()) do fixUI(child) end
+        local uiConn = head.ChildAdded:Connect(fixUI)
+        table.insert(Headless.Connections, uiConn)
         
-        -- Vòng lặp giữ khớp cổ và tắt va chạm của đầu
+        local downOffset = Vector3.new(0, Config.Depth, 0)
+        
         local connection
         connection = RunService.Heartbeat:Connect(function()
             if not neck or not neck.Parent or not head or not head.Parent then
@@ -31,10 +49,9 @@ function Headless.Enable(player)
                 return
             end
             if Headless.Active then
-                -- Triệt tiêu vật lý của đầu để tránh kẹt đất/fling
                 head.CanCollide = false
                 head.Massless = true
-                neck.C0 = Headless.OriginalC0 * CFrame.new(0, Config.Depth, 0)
+                neck.C0 = CFrame.new(Headless.OriginalC0.Position - downOffset) * Headless.OriginalC0.Rotation
             else
                 neck.C0 = Headless.OriginalC0
                 head.Massless = false
@@ -44,9 +61,7 @@ function Headless.Enable(player)
         table.insert(Headless.Connections, connection)
     end
     
-    if player.Character then
-        task.spawn(applyHeadless, player.Character)
-    end
+    if player.Character then task.spawn(applyHeadless, player.Character) end
     
     local charAddedConn = player.CharacterAdded:Connect(function(character)
         task.wait(0.5)
@@ -59,9 +74,7 @@ function Headless.Disable(player)
     Headless.Active = false
     
     for _, conn in ipairs(Headless.Connections) do
-        if conn then
-            conn:Disconnect()
-        end
+        if conn then conn:Disconnect() end
     end
     Headless.Connections = {}
     
@@ -69,17 +82,12 @@ function Headless.Disable(player)
     if character then
         local humanoid = character:FindFirstChildOfClass("Humanoid")
         local head = character:FindFirstChild("Head")
-        if head then
-            head.Massless = false
-        end
+        if head then head.Massless = false end
         if humanoid then
             local neck = Utils.getNeckJoint(character, humanoid)
-            if neck and Headless.OriginalC0 then
-                neck.C0 = Headless.OriginalC0
-            end
+            if neck and Headless.OriginalC0 then neck.C0 = Headless.OriginalC0 end
         end
     end
-    
     Headless.OriginalC0 = nil
 end
 
