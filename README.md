@@ -12,4 +12,4 @@ Script hỗ trợ ẩn phần đầu nhân vật (Headless) bằng phương phá
 Sao chép lệnh dưới đây và dán vào Executor của bạn:
 
 ```lua
-loadstring(game:HttpGet("https://raw.githubusercontent.com/USERNAME/REPO_NAME/main/build/bundled.lua"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/nirunakahokaku-tech/roblox-fe-headless/main/build/bundled.lua"))()
