@@ -1,0 +1,79 @@
+local RunService = game:GetService("RunService")
+local Utils = require(script.Parent.utils)
+local Config = require(script.Parent.Parent.config)
+
+local Headless = {
+    Connections = {},
+    OriginalC0 = nil,
+    Active = false
+}
+
+function Headless.Enable(player)
+    if Headless.Active then return end
+    Headless.Active = true
+    
+    local function applyHeadless(character)
+        local _, humanoid, head = Utils.waitForCharacter(player)
+        if not character or not humanoid or not head then return end
+        
+        local neck = Utils.getNeckJoint(character, humanoid)
+        if not neck then return end
+        
+        if not Headless.OriginalC0 then
+            Headless.OriginalC0 = neck.C0
+        end
+        
+        -- Vòng lặp giữ khớp cổ luôn ở vị trí sâu bên dưới bất chấp hệ thống vật lý reset
+        local connection
+        connection = RunService.Heartbeat:Connect(function()
+            if not neck or not neck.Parent then
+                connection:Disconnect()
+                return
+            end
+            if Headless.Active then
+                -- Dịch chuyển khớp C0 xuống dưới sâu (Khách hàng có Network Ownership nên sẽ đồng bộ FE)
+                neck.C0 = Headless.OriginalC0 * CFrame.new(0, Config.Depth, 0)
+            else
+                neck.C0 = Headless.OriginalC0
+                connection:Disconnect()
+            end
+        end)
+        table.insert(Headless.Connections, connection)
+    end
+    
+    if player.Character then
+        task.spawn(applyHeadless, player.Character)
+    end
+    
+    local charAddedConn = player.CharacterAdded:Connect(function(character)
+        task.wait(0.5)
+        applyHeadless(character)
+    end)
+    table.insert(Headless.Connections, charAddedConn)
+end
+
+function Headless.Disable(player)
+    Headless.Active = false
+    
+    for _, conn in ipairs(Headless.Connections) do
+        if conn then
+            conn:Disconnect()
+        end
+    end
+    Headless.Connections = {}
+    
+    local character = player.Character
+    if character then
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            local neck = Utils.getNeckJoint(character, humanoid)
+            if neck and Headless.OriginalC0 then
+                neck.C0 = Headless.OriginalC0
+            end
+        end
+    end
+    
+    Headless.OriginalC0 = nil
+end
+
+return Headless
