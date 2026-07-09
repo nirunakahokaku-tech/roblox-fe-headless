@@ -23,18 +23,21 @@ function Headless.Enable(player)
             Headless.OriginalC0 = neck.C0
         end
         
-        -- Vòng lặp giữ khớp cổ luôn ở vị trí sâu bên dưới bất chấp hệ thống vật lý reset
+        -- Vòng lặp giữ khớp cổ và tắt va chạm của đầu
         local connection
         connection = RunService.Heartbeat:Connect(function()
-            if not neck or not neck.Parent then
+            if not neck or not neck.Parent or not head or not head.Parent then
                 connection:Disconnect()
                 return
             end
             if Headless.Active then
-                -- Dịch chuyển khớp C0 xuống dưới sâu (Khách hàng có Network Ownership nên sẽ đồng bộ FE)
+                -- Triệt tiêu vật lý của đầu để tránh kẹt đất/fling
+                head.CanCollide = false
+                head.Massless = true
                 neck.C0 = Headless.OriginalC0 * CFrame.new(0, Config.Depth, 0)
             else
                 neck.C0 = Headless.OriginalC0
+                head.Massless = false
                 connection:Disconnect()
             end
         end)
@@ -65,6 +68,10 @@ function Headless.Disable(player)
     local character = player.Character
     if character then
         local humanoid = character:FindFirstChildOfClass("Humanoid")
+        local head = character:FindFirstChild("Head")
+        if head then
+            head.Massless = false
+        end
         if humanoid then
             local neck = Utils.getNeckJoint(character, humanoid)
             if neck and Headless.OriginalC0 then
